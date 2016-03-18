@@ -9,26 +9,15 @@ yum -y update
 systemctl disable iptables-services firewalld
 systemctl stop iptables-services firewalld
 
-yum -y remove docker-selinux-1.8.2-10.el7.centos.x86_64
-yum -y remove docker-1.8.2-10.el7.centos.x86_64
+tee /etc/yum.repos.d/k8s.repo <<-'EOF'
+[virt7-docker-common-release]
+name=virt7-docker-common-release
+baseurl=http://cbs.centos.org/repos/virt7-docker-common-release/x86_64/os/
+gpgcheck=0
+EOF
 
-yum install -y flannel kubernetes-node
-
-#tee /etc/yum.repos.d/docker.repo <<-'EOF'
-#[dockerrepo]
-#name=Docker Repository
-#baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
-#enabled=1
-#gpgcheck=1
-#gpgkey=https://yum.dockerproject.org/gpg
-#EOF
-#yum -y install docker-engine
-
-#systemctl stop docker
-#rm -rf /var/lib/docker
-
-#sed -i "s/OPTIONS=.*/OPTIONS='--selinux-enabled=false'/g" /etc/sysconfig/docker
-#sed -i "s/DOCKER_STORAGE_OPTIONS=.*/DOCKER_STORAGE_OPTIONS=-s overlay/g" /etc/sysconfig/docker
+yum install -y etcd flannel
+yum -y install --enablerepo=virt7-docker-common-release kubernetes
 
 sed -i 's/KUBE_MASTER=.*/KUBE_MASTER="--master=http:\/\/'$1':8080"/g' /etc/kubernetes/config
 
@@ -44,6 +33,8 @@ sed -i 's/FLANNEL_ETCD_KEY=.*/FLANNEL_ETCD_KEY="\/k8s.io\/network"/g' /etc/sysco
 systemctl restart flanneld
 systemctl enable flanneld
 systemctl status flanneld
+
+sleep 10s
 
 for SERVICES in docker kubelet kube-proxy; do 
     systemctl restart $SERVICES
